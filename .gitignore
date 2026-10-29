@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+
+# Virtual environment (uv creates this)
+.venv/
+
+# Tool caches
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Cached Scryfall data (large, re-downloadable)
+data/*
+!data/.gitkeep
+
+# Generated output
+output/
+*.png
+
+# OS / editor clutter
+.DS_Store
+Thumbs.db
+desktop.ini
