@@ -21,9 +21,10 @@ from collections import Counter
 from collections.abc import Iterable
 from dataclasses import dataclass
 from enum import StrEnum
+from typing import Any
 
 from mtg_analyser import karsten
-from mtg_analyser.mana import SOURCE_COLOURS, ManaCost, Pip, parse_face_costs
+from mtg_analyser.mana import SOURCE_COLOURS, ManaCost, Pip, colour_key, parse_face_costs
 from mtg_analyser.models import Card, Deck, DeckFormat, ResolvedEntry, Section
 from mtg_analyser.odds import cards_seen, prob_at_least, prob_exactly
 
@@ -120,11 +121,60 @@ class DeckAnalysis:
     land_check: LandCheck
     requirements: list[Requirement]  # the hardest card for each colour (set)
     hand: HandOdds
+    include_sideboard: bool = False
 
     @property
     def pip_share(self) -> dict[str, float]:
         total = sum(self.pips.values())
         return {c: n / total for c, n in self.pips.items()} if total else {}
+
+    def to_dict(self) -> dict[str, Any]:
+        """Everything as plain JSON-ready data, derived values included."""
+        lc, hand = self.land_check, self.hand
+        return {
+            "format": str(self.format),
+            "library_size": self.library_size,
+            "include_sideboard": self.include_sideboard,
+            "curve": {
+                (f"{mv}+" if mv == CURVE_TOP else str(mv)): n for mv, n in self.curve.items()
+            },
+            "average_mana_value": self.average_mana_value,
+            "pips": self.pips,
+            "pip_share": self.pip_share,
+            "sources": self.sources,
+            "land_check": {
+                "lands": lc.lands,
+                "mdfc_lands": lc.mdfc_lands,
+                "mdfc_land_value": lc.mdfc_land_value,
+                "effective": lc.effective,
+                "cheap_draw_or_ramp": lc.cheap_draw_or_ramp,
+                "recommended": lc.recommended,
+                "status": str(lc.status),
+            },
+            "requirements": [
+                {
+                    "colours": colour_key(r.colours),
+                    "card": r.card,
+                    "mana_cost": r.mana_cost,
+                    "turn": r.turn,
+                    "required": r.required,
+                    "available": r.available,
+                    "shortfall": r.shortfall,
+                    "met": r.met,
+                }
+                for r in self.requirements
+            ],
+            "hand": {
+                "library_size": hand.library_size,
+                "lands": hand.lands,
+                "opening_lands": list(hand.opening_lands),
+                "keepable": hand.keepable,
+                "land_drops": [
+                    {"turn": t, "on_the_play": play, "on_the_draw": draw}
+                    for t, play, draw in hand.land_drops
+                ],
+            },
+        }
 
 
 # ---------- reading card text ----------
@@ -377,14 +427,23 @@ def _hand_odds(library_size: int, lands: int, commander: bool) -> HandOdds:
     return HandOdds(library_size, lands, opening, keepable, tuple(drops))
 
 
-def analyse(deck: Deck, resolved: list[ResolvedEntry]) -> DeckAnalysis:
+def analyse(
+    deck: Deck, resolved: list[ResolvedEntry], *, include_sideboard: bool = False
+) -> DeckAnalysis:
     """Analyse a deck. `resolved` comes from parser.resolve_cards; cards that didn't
-    resolve still count towards the library size but are otherwise left out."""
+    resolve still count towards the library size but are otherwise left out.
+
+    With include_sideboard, sideboard cards are analysed as part of the library
+    (FR-4), e.g. to look at a whole Limited pool. The format stays the deck's own.
+    """
     fmt = deck.format
     commander = fmt == DeckFormat.COMMANDER
-    library_size = deck.total_cards(Section.MAINBOARD)
+    library_sections = {Section.MAINBOARD}
+    if include_sideboard:
+        library_sections.add(Section.SIDEBOARD)
+    library_size = sum(deck.total_cards(s) for s in library_sections)
 
-    library = [r for r in resolved if r.entry.section == Section.MAINBOARD]
+    library = [r for r in resolved if r.entry.section in library_sections]
     commanders = [r for r in resolved if r.entry.section == Section.COMMANDER]
     library_spells = [r for r in library if not r.card.is_land]
     all_spells = library_spells + [r for r in commanders if not r.card.is_land]
@@ -442,4 +501,5 @@ def analyse(deck: Deck, resolved: list[ResolvedEntry]) -> DeckAnalysis:
         land_check=LandCheck(lands, mdfcs, mdfc_value, cheap, recommended),
         requirements=requirements,
         hand=_hand_odds(library_size, lands + mdfcs, commander),
+        include_sideboard=include_sideboard,
     )

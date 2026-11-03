@@ -441,3 +441,27 @@ def test_card_text_reads_both_halves_of_split_cards(db) -> None:
 def test_card_text_reads_only_the_spell_side_of_an_mdfc(db) -> None:
     text = card_text(db.get("Shatterskull Smashing"))
     assert "add {r}" not in text  # that's the land side
+
+
+def test_include_sideboard() -> None:
+    deck, resolved = build(
+        (17, land()), (23, spell(cost="{2}{R}")), (5, spell("Side", "{G}"), Section.SIDEBOARD)
+    )
+    plain = analyse(deck, resolved)
+    pool = analyse(deck, resolved, include_sideboard=True)
+    assert (plain.library_size, pool.library_size) == (40, 45)
+    assert "G" not in plain.pips and pool.pips["G"] == 5
+    assert pool.format == DeckFormat.LIMITED  # still the deck's own format
+    assert pool.include_sideboard
+
+
+def test_to_dict_is_json_ready() -> None:
+    import json
+
+    deck, resolved = build((20, land()), (4, mdfc()), (36, spell("Gold", "{W}{R}")))
+    data = json.loads(json.dumps(analyse(deck, resolved).to_dict()))
+    assert data["curve"]["7+"] == 0
+    assert data["land_check"]["status"] in {"ok", "too few", "too many"}
+    assert data["land_check"]["effective"] == pytest.approx(20 + 4 * 0.74)
+    assert [r["colours"] for r in data["requirements"]] == ["W", "R", "WR"]
+    assert len(data["hand"]["land_drops"]) == 4

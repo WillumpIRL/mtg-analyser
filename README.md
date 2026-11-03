@@ -3,9 +3,8 @@
 Analyse a Magic: The Gathering decklist's mana curve, colour requirements and land balance.
 Supports Limited (40), Constructed (60) and Commander (100) decks.
 
-> **Status:** card data, decklist parsing and the analysis engine are done (Phases 0–3).
-> The `analyse` command that shows the analysis in the terminal is next (Phase 4).
-> Until then, the analysis is available from Python (see [below](#using-it-from-python)).
+> **Status:** Phases 0–4 are done: card data, decklist parsing, the analysis engine and
+> the `analyse` command, with charts, JSON output and deck checks.
 
 ## What it does
 
@@ -17,12 +16,15 @@ Supports Limited (40), Constructed (60) and Commander (100) decks.
 - **Decklist parsing** for plain text, MTG Arena and MTGO exports, with sections
   (Commander, Companion, Deck, Sideboard). Lines it can't read are reported with their
   line numbers instead of stopping the parse.
-- **Analysis** (from Python for now):
+- **Analysis**:
   - mana curve and average mana value
   - coloured pips, and mana sources per colour
   - land count against a recommendation
   - whether each colour has enough sources to cast its hardest card on curve
   - opening-hand land odds and the chance of hitting land drops on turns 1–4
+- **Deck checks**: deck size, copy limits (4 in Constructed, singleton in Commander),
+  sideboard size and Commander colour identity. Ban lists aren't checked.
+- **Output** as a terminal report, JSON (`--json`) or a PNG chart (`--chart`).
 
 ## Setup
 
@@ -36,15 +38,49 @@ uv run mtg-analyser update-cards # download card data (also happens automaticall
 ## Usage
 
 ```bash
+uv run mtg-analyser analyse sample_decks/limited_rg_m20.txt
+uv run mtg-analyser analyse - < my_deck.txt        # or paste a list on stdin
 uv run mtg-analyser card "lightning bolt"         # look up one card
-uv run mtg-analyser parse sample_decks/limited_rg_m20.txt
-uv run mtg-analyser parse - < my_deck.txt          # or paste a list on stdin
 uv run mtg-analyser update-cards                   # force a fresh download
 uv run mtg-analyser version
 ```
 
-`parse` is temporary: it shows how a list was read (section, quantity, matched card)
-and any problems, such as unknown names with "did you mean" suggestions.
+`analyse` (or `analyze`) options:
+
+| Option | What it does |
+| --- | --- |
+| `--list` | Also list every line and the card it matched |
+| `--with-sideboard` | Analyse the sideboard as well, e.g. a whole Limited pool |
+| `--chart` | Save a PNG chart to `output/<deck name>.png` |
+| `--json` | Print the full analysis as JSON instead of the report |
+
+Lines that couldn't be used, such as unknown names with "did you mean" suggestions, are
+listed at the top of the report. Progress and status messages go to stderr, so
+`analyse deck.txt --json > deck.json` always gives clean JSON.
+
+A shortened report for the sample mono-red deck:
+
+```text
+constructed_mono_red_arena.txt ─────────────────────────────────────────
+Constructed deck · 60 cards · sideboard 13 (not analysed; --with-sideboard)
+
+Lands ──────────────────────────────────────────────────────────────────
+19 lands + 3 MDFCs (worth 2.22) = 21.2
+Recommended: 23.4  ✗ too few, by 2.2
+
+Colours ────────────────────────────────────────────────────────────────
+Sources needed to cast each colour's hardest card on curve:
+Colours  Hardest card           Cost       Turn  Need  Have
+Red      Shatterskull Smashing  {X}{R}{R}     3    18    22  ✓ ok
+
+Opening hand ───────────────────────────────────────────────────────────
+Keepable (2–5 lands): 80%
+Turn  On the play  On the draw
+   3          72%          80%
+```
+
+The chart shows the mana curve, and each colour's sources against what its hardest
+card needs.
 
 ### Decklist format
 
@@ -73,6 +109,8 @@ The format is guessed from the size: a commander or exactly 100 cards means Comm
 60+ means Constructed, and 40+ means Limited.
 
 ### Using it from Python
+
+The command is a thin layer over the library, which you can also use directly:
 
 ```python
 from pathlib import Path
@@ -152,13 +190,19 @@ src/mtg_analyser/
   karsten.py    Karsten's tables and formulas
   odds.py       hypergeometric probabilities
   analysis.py   the analysis itself
-  cli.py        thin command-line layer (Typer + Rich)
+  legality.py   deck size, copy limit and colour identity checks
+  charts.py     PNG chart (matplotlib)
+  report.py     terminal report (Rich), used only by the CLI
+  cli.py        thin command-line layer (Typer)
 tests/          pytest; never touches the network
 sample_decks/   example decklists
 data/           card cache (git-ignored)
+output/         charts from --chart (git-ignored)
 ```
 
-The core library has no terminal code. `cli.py` only formats what the library returns.
+The core library has no terminal code. `cli.py` and `report.py` only format what the
+library returns, and matplotlib is only imported when `--chart` is used, so a normal
+run stays well under the 2-second target.
 
 ## Development
 

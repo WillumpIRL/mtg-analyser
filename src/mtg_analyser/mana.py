@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import re
 from collections import Counter
+from collections.abc import Iterable
 from dataclasses import dataclass, field
 
 COLOURS = ("W", "U", "B", "R", "G")
@@ -54,6 +55,22 @@ class ManaCost:
             for colour in pip:
                 weights[colour] += count / len(pip)
         return weights
+
+
+COLOUR_NAMES = {
+    "W": "White",
+    "U": "Blue",
+    "B": "Black",
+    "R": "Red",
+    "G": "Green",
+    "C": "Colourless",
+}
+
+
+def colour_key(colours: Iterable[str]) -> str:
+    """Colours in the usual WUBRG(C) order as one string: {"U", "W"} -> "WU"."""
+    present = set(colours)
+    return "".join(c for c in SOURCE_COLOURS if c in present)
 
 
 def parse_mana_cost(cost: str) -> ManaCost:

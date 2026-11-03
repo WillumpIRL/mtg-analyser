@@ -1,7 +1,13 @@
-"""Command-line interface. The `analyse` command arrives in Phase 4."""
+"""Command-line interface: a thin layer that loads, analyses and prints.
+
+Results go to stdout; progress bars, status messages and errors go to stderr, so
+`analyse --json > out.json` stays valid JSON even when card data downloads first.
+"""
 
 import io
+import json
 import sys
+from dataclasses import asdict
 from pathlib import Path
 from typing import Annotated
 
@@ -10,17 +16,19 @@ from rich.console import Console
 from rich.markup import escape
 from rich.panel import Panel
 from rich.progress import BarColumn, DownloadColumn, Progress, TransferSpeedColumn
-from rich.table import Table
 
-from mtg_analyser import __version__
+from mtg_analyser import __version__, report
+from mtg_analyser.analysis import analyse as run_analysis
 from mtg_analyser.card_db import CardDatabase, CardNotFoundError
-from mtg_analyser.models import Section
+from mtg_analyser.legality import check_deck
 from mtg_analyser.parser import parse_decklist, read_decklist, resolve_cards
 from mtg_analyser.scryfall import CACHE_FILENAME, DEFAULT_DATA_DIR, ScryfallError, needs_update
 from mtg_analyser.scryfall import load_cards as _load_cards
 
 app = typer.Typer(help="Analyse an MTG decklist's mana curve, colours and lands.")
 console = Console()
+err_console = Console(stderr=True)
+CHART_DIR = "output"
 
 
 def load_cards_with_progress(force_refresh: bool = False):
@@ -29,13 +37,13 @@ def load_cards_with_progress(force_refresh: bool = False):
     if not needs_download:
         return _load_cards()
 
-    console.print("Downloading card data from Scryfall (about 25 MB, once a week)...")
+    err_console.print("Downloading card data from Scryfall (about 25 MB, once a week)...")
     with Progress(
         "[progress.description]{task.description}",
         BarColumn(),
         DownloadColumn(),
         TransferSpeedColumn(),
-        console=console,
+        console=err_console,
     ) as bar:
         task = bar.add_task("Oracle cards", total=None)
 
@@ -43,7 +51,7 @@ def load_cards_with_progress(force_refresh: bool = False):
             bar.update(task, completed=done, total=total)
 
         cards = _load_cards(force_refresh=force_refresh, progress=on_progress)
-    console.print(f"[green]Saved {len(cards):,} cards to the local cache.[/]")
+    err_console.print(f"[green]Saved {len(cards):,} cards to the local cache.[/]")
     return cards
 
 
@@ -76,7 +84,7 @@ def update_cards() -> None:
     try:
         load_cards_with_progress(force_refresh=True)
     except ScryfallError as exc:
-        console.print(f"[red]{exc}[/]")
+        err_console.print(f"[red]{exc}[/]")
         raise typer.Exit(code=1) from exc
 
 
@@ -86,13 +94,13 @@ def card(name: Annotated[str, typer.Argument(help='Card name, e.g. "Lightning Bo
     try:
         db = CardDatabase(load_cards_with_progress())
     except ScryfallError as exc:
-        console.print(f"[red]{exc}[/]")
+        err_console.print(f"[red]{exc}[/]")
         raise typer.Exit(code=1) from exc
 
     try:
         c = db.get(name)
     except CardNotFoundError as exc:
-        console.print(f"[yellow]{exc}[/]")
+        err_console.print(f"[yellow]{escape(str(exc))}[/]")
         raise typer.Exit(code=1) from exc
 
     lines = [
@@ -111,49 +119,75 @@ def card(name: Annotated[str, typer.Argument(help='Card name, e.g. "Lightning Bo
 
 
 @app.command()
-def parse(
+def analyse(
     path: Annotated[str, typer.Argument(help='Decklist file, or "-" to paste text on stdin')],
+    show_cards: Annotated[
+        bool, typer.Option("--list", help="Also list every line and the card it matched.")
+    ] = False,
+    with_sideboard: Annotated[
+        bool, typer.Option("--with-sideboard", help="Analyse the sideboard too (e.g. a pool).")
+    ] = False,
+    as_json: Annotated[bool, typer.Option("--json", help="Print the analysis as JSON.")] = False,
+    chart: Annotated[
+        bool, typer.Option("--chart", help=f"Also save a PNG chart in {CHART_DIR}/.")
+    ] = False,
 ) -> None:
-    """Show how a decklist is read (temporary, until `analyse` arrives)."""
+    """Analyse a decklist's mana curve, colours, lands and opening hands."""
+    name = "pasted deck" if path == "-" else Path(path).name
     if path == "-":
         deck, problems = parse_decklist(sys.stdin.read())
     else:
         try:
             deck, problems = read_decklist(Path(path))
         except OSError as exc:
-            console.print(f"[red]Can't read {path}: {exc.strerror}[/]")
+            err_console.print(f"[red]Can't read {escape(path)}: {exc.strerror}[/]")
             raise typer.Exit(code=1) from exc
 
-    cards_by_line: dict[int, str] = {}
     try:
-        resolved, unknown = resolve_cards(deck, CardDatabase(load_cards_with_progress()))
-        cards_by_line = {r.entry.line_number: r.card.name for r in resolved}
-        problems = sorted(problems + unknown, key=lambda p: p.line_number)
+        db = CardDatabase(load_cards_with_progress())
     except ScryfallError as exc:
-        console.print(f"[yellow]Card names not checked: {exc}[/]")
+        err_console.print(f"[red]{exc}[/]")
+        raise typer.Exit(code=1) from exc
+    resolved, unknown = resolve_cards(deck, db)
+    problems = sorted(problems + unknown, key=lambda p: p.line_number)
 
-    table = Table(title="Decklist")
-    for column in ("Line", "Section", "Qty", "Name", "Card"):
-        table.add_column(column, justify="right" if column in ("Line", "Qty") else "left")
-    for e in deck.entries:
-        card_name = cards_by_line.get(e.line_number, "")
-        # escape(): decklist text is user input, and Rich would read "[...]" as markup
-        table.add_row(str(e.line_number), e.section, str(e.quantity), escape(e.name), card_name)
-    console.print(table)
-    console.print(
-        f"[bold]Format:[/] {deck.format}   [bold]Analysed cards:[/] {deck.total_cards()}   "
-        f"[bold]Sideboard:[/] {deck.total_cards(Section.SIDEBOARD)}"
-    )
+    if not resolved:
+        if problems:
+            err_console.print(report.problems_section(problems))
+        err_console.print("[red]No cards recognised, so there's nothing to analyse.[/]")
+        raise typer.Exit(code=1)
 
-    if problems:
-        problem_table = Table(title="Problems", title_style="bold yellow")
-        problem_table.add_column("Line", justify="right")
-        problem_table.add_column("Text")
-        problem_table.add_column("Problem")
-        for p in problems:
-            hint = f"\nDid you mean: {', '.join(p.suggestions)}?" if p.suggestions else ""
-            problem_table.add_row(str(p.line_number), escape(p.line), escape(p.message + hint))
-        console.print(problem_table)
+    analysis = run_analysis(deck, resolved, include_sideboard=with_sideboard)
+    notes = check_deck(deck, resolved)
+
+    chart_path = None
+    if chart:
+        # Imported here: matplotlib takes longer to load than the whole analysis (NFR-1).
+        from mtg_analyser.charts import save_chart
+
+        stem = "pasted-deck" if path == "-" else Path(path).stem
+        title = f"{name} · {deck.format.capitalize()}, {deck.total_cards()} cards"
+        chart_path = save_chart(analysis, Path(CHART_DIR) / f"{stem}.png", title)
+        err_console.print(f"Saved chart to {chart_path}")
+
+    if as_json:
+        data = {
+            "deck": name,
+            "problems": [asdict(p) for p in problems],
+            "analysis": analysis.to_dict(),
+            "deck_checks": [asdict(n) for n in notes],
+            "chart": str(chart_path) if chart_path else None,
+        }
+        sys.stdout.write(json.dumps(data, indent=2, ensure_ascii=False) + "\n")
+        return
+
+    for part in report.full_report(
+        name, deck, resolved, analysis, notes, problems, show_cards=show_cards
+    ):
+        console.print(part)
+
+
+app.command("analyze", hidden=True)(analyse)  # US spelling
 
 
 if __name__ == "__main__":
