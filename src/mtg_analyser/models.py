@@ -72,6 +72,9 @@ class Card:
         produced_mana: Colours of mana this card can produce, e.g. ("G",) for Forest.
         layout: Scryfall layout, e.g. "normal", "split", "modal_dfc".
         faces: The card's faces, if it has more than one.
+        rarity: Rarity of the printing Scryfall picked for this card, e.g. "mythic".
+            Reprints can differ, but for land/spell MDFCs it's what Karsten's
+            land-count weights depend on.
     """
 
     name: str
@@ -84,6 +87,7 @@ class Card:
     oracle_text: str = ""
     layout: str = "normal"
     faces: tuple[CardFace, ...] = field(default_factory=tuple)
+    rarity: str = ""
 
     # ---------- handy properties ----------
 
@@ -140,6 +144,7 @@ class Card:
             oracle_text=data.get("oracle_text", ""),
             layout=data.get("layout", "normal"),
             faces=faces,
+            rarity=data.get("rarity", ""),
         )
 
     def to_dict(self) -> dict[str, Any]:
@@ -163,6 +168,7 @@ class Card:
             oracle_text=data.get("oracle_text", ""),
             layout=data.get("layout", "normal"),
             faces=faces,
+            rarity=data.get("rarity", ""),
         )
 
 

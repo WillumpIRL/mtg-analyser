@@ -1,30 +1,30 @@
 [
   {
-    "object": "card", "name": "Lightning Bolt", "layout": "normal",
+    "object": "card", "name": "Lightning Bolt", "layout": "normal", "rarity": "uncommon",
     "mana_cost": "{R}", "cmc": 1.0, "type_line": "Instant",
     "oracle_text": "Lightning Bolt deals 3 damage to any target.",
     "colors": ["R"], "color_identity": ["R"]
   },
   {
-    "object": "card", "name": "Counterspell", "layout": "normal",
+    "object": "card", "name": "Counterspell", "layout": "normal", "rarity": "uncommon",
     "mana_cost": "{U}{U}", "cmc": 2.0, "type_line": "Instant",
     "oracle_text": "Counter target spell.",
     "colors": ["U"], "color_identity": ["U"]
   },
   {
-    "object": "card", "name": "Forest", "layout": "normal",
+    "object": "card", "name": "Forest", "layout": "normal", "rarity": "common",
     "mana_cost": "", "cmc": 0.0, "type_line": "Basic Land — Forest",
     "oracle_text": "({T}: Add {G}.)",
     "colors": [], "color_identity": ["G"], "produced_mana": ["G"]
   },
   {
-    "object": "card", "name": "Sol Ring", "layout": "normal",
+    "object": "card", "name": "Sol Ring", "layout": "normal", "rarity": "uncommon",
     "mana_cost": "{1}", "cmc": 1.0, "type_line": "Artifact",
     "oracle_text": "{T}: Add {C}{C}.",
     "colors": [], "color_identity": [], "produced_mana": ["C"]
   },
   {
-    "object": "card", "name": "Fire // Ice", "layout": "split",
+    "object": "card", "name": "Fire // Ice", "layout": "split", "rarity": "uncommon",
     "mana_cost": "{1}{R} // {1}{U}", "cmc": 4.0, "type_line": "Instant // Instant",
     "colors": ["R", "U"], "color_identity": ["R", "U"],
     "card_faces": [
@@ -35,7 +35,7 @@
     ]
   },
   {
-    "object": "card", "name": "Brazen Borrower // Petty Theft", "layout": "adventure",
+    "object": "card", "name": "Brazen Borrower // Petty Theft", "layout": "adventure", "rarity": "mythic",
     "mana_cost": "{1}{U}{U} // {1}{U}", "cmc": 3.0,
     "type_line": "Creature — Faerie Rogue // Instant — Adventure",
     "colors": ["U"], "color_identity": ["U"],
@@ -48,7 +48,7 @@
     ]
   },
   {
-    "object": "card", "name": "Delver of Secrets // Insectile Aberration", "layout": "transform",
+    "object": "card", "name": "Delver of Secrets // Insectile Aberration", "layout": "transform", "rarity": "common",
     "cmc": 1.0, "type_line": "Creature — Human Wizard // Creature — Human Insect",
     "color_identity": ["U"],
     "card_faces": [
@@ -61,7 +61,7 @@
   },
   {
     "object": "card", "name": "Shatterskull Smashing // Shatterskull, the Hammer Pass",
-    "layout": "modal_dfc", "cmc": 2.0, "type_line": "Sorcery // Land",
+    "layout": "modal_dfc", "rarity": "mythic", "cmc": 2.0, "type_line": "Sorcery // Land",
     "color_identity": ["R"], "produced_mana": ["R"],
     "card_faces": [
       {"object": "card_face", "name": "Shatterskull Smashing", "mana_cost": "{X}{R}{R}",
@@ -73,32 +73,32 @@
     ]
   },
   {
-    "object": "card", "name": "Lim-Dûl's Vault", "layout": "normal",
+    "object": "card", "name": "Lim-Dûl's Vault", "layout": "normal", "rarity": "uncommon",
     "mana_cost": "{U}{B}", "cmc": 2.0, "type_line": "Instant",
     "colors": ["B", "U"], "color_identity": ["B", "U"]
   },
   {
-    "object": "card", "name": "Æther Vial", "layout": "normal",
+    "object": "card", "name": "Æther Vial", "layout": "normal", "rarity": "common",
     "mana_cost": "{1}", "cmc": 1.0, "type_line": "Artifact",
     "colors": [], "color_identity": []
   },
   {
-    "object": "card", "name": "Kitchen Finks", "layout": "normal",
+    "object": "card", "name": "Kitchen Finks", "layout": "normal", "rarity": "uncommon",
     "mana_cost": "{1}{G/W}{G/W}", "cmc": 3.0, "type_line": "Creature — Ouphe",
     "colors": ["G", "W"], "color_identity": ["G", "W"]
   },
   {
-    "object": "card", "name": "Gitaxian Probe", "layout": "normal",
+    "object": "card", "name": "Gitaxian Probe", "layout": "normal", "rarity": "common",
     "mana_cost": "{U/P}", "cmc": 1.0, "type_line": "Sorcery",
     "colors": ["U"], "color_identity": ["U"]
   },
   {
-    "object": "card", "name": "Fireball", "layout": "normal",
+    "object": "card", "name": "Fireball", "layout": "normal", "rarity": "uncommon",
     "mana_cost": "{X}{R}", "cmc": 1.0, "type_line": "Sorcery",
     "colors": ["R"], "color_identity": ["R"]
   },
   {
-    "object": "card", "name": "Goblin", "layout": "token",
+    "object": "card", "name": "Goblin", "layout": "token", "rarity": "common",
     "mana_cost": "", "cmc": 0.0, "type_line": "Token Creature — Goblin",
     "colors": ["R"], "color_identity": ["R"]
   }

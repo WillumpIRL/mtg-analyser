@@ -8,7 +8,7 @@ Conventions, mostly following Frank Karsten (see karsten.py for the articles):
 - The library is the mainboard. A commander sits in the command zone, so it's left
   out of the curve, average mana value and draw odds, but its colours still count.
 - Land/spell MDFCs (e.g. Shatterskull Smashing) are spells in the curve, count as
-  MDFC_LAND_WEIGHT of a land in the land check, and as full colour sources.
+  0.38 of a land in the land check (0.74 if mythic), and as full colour sources.
 - The curve uses Scryfall's mana values, where X counts as 0. For colour checks an
   X spell is assumed cast with X = ASSUMED_X: Karsten suggests picking a typical X
   by hand, which we can't, but X = 0 is rarely the point of casting one.
@@ -33,7 +33,6 @@ KEEPABLE_LANDS = range(2, 6)  # 2-5 lands in an opening seven
 OPENING_HAND = 7
 ASSUMED_X = 1
 
-MDFC_LAND_WEIGHT = 0.5
 # Nonland mana sources, per Karsten: dorks may die, so half a source for spells of
 # mana value 2+; rocks are sturdier, three-quarters of a source for mana value 3+.
 DORK_WEIGHT, DORK_MIN_MANA_VALUE = 0.5, 2
@@ -56,13 +55,14 @@ class LandStatus(StrEnum):
 class LandCheck:
     lands: int
     mdfc_lands: int
+    mdfc_land_value: float  # what the MDFCs are worth in lands, see mdfc_land_weight()
     cheap_draw_or_ramp: int
     recommended: float | None
 
     @property
     def effective(self) -> float:
         """Lands with MDFCs counted partially, comparable to `recommended`."""
-        return self.lands + MDFC_LAND_WEIGHT * self.mdfc_lands
+        return self.lands + self.mdfc_land_value
 
     @property
     def status(self) -> LandStatus:
@@ -203,6 +203,15 @@ def is_cheap_ramp(card: Card) -> bool:
     doubles = "enchanted land is tapped" in text and "adds an additional" in text
     cheats = "put a creature card with" in text and "from your hand onto the battlefield" in text
     return adds or fetches or doubles or cheats
+
+
+def mdfc_land_weight(card: Card) -> float:
+    """How much of a land a land/spell MDFC counts as (0 for anything else)."""
+    if not card.is_mdfc_land:
+        return 0.0
+    if card.rarity == "mythic":
+        return karsten.MYTHIC_MDFC_LAND_WEIGHT
+    return karsten.MDFC_LAND_WEIGHT
 
 
 # ---------- mana sources ----------
@@ -401,6 +410,7 @@ def analyse(deck: Deck, resolved: list[ResolvedEntry]) -> DeckAnalysis:
 
     lands = sum(r.entry.quantity for r in library if r.card.is_land)
     mdfcs = sum(r.entry.quantity for r in library if r.card.is_mdfc_land)
+    mdfc_value = sum(r.entry.quantity * mdfc_land_weight(r.card) for r in library)
     cheap = sum(
         r.entry.quantity for r in library_spells if is_cheap_draw(r.card) or is_cheap_ramp(r.card)
     )
@@ -429,7 +439,7 @@ def analyse(deck: Deck, resolved: list[ResolvedEntry]) -> DeckAnalysis:
         average_mana_value=average,
         pips={c: n for c, n in pips.items() if n},
         sources={c: n for c, n in colour_sources.items() if n},
-        land_check=LandCheck(lands, mdfcs, cheap, recommended),
+        land_check=LandCheck(lands, mdfcs, mdfc_value, cheap, recommended),
         requirements=requirements,
         hand=_hand_odds(library_size, lands + mdfcs, commander),
     )

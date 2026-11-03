@@ -16,7 +16,7 @@ from mtg_analyser import __version__
 from mtg_analyser.card_db import CardDatabase, CardNotFoundError
 from mtg_analyser.models import Section
 from mtg_analyser.parser import parse_decklist, read_decklist, resolve_cards
-from mtg_analyser.scryfall import CACHE_FILENAME, DEFAULT_DATA_DIR, ScryfallError, is_stale
+from mtg_analyser.scryfall import CACHE_FILENAME, DEFAULT_DATA_DIR, ScryfallError, needs_update
 from mtg_analyser.scryfall import load_cards as _load_cards
 
 app = typer.Typer(help="Analyse an MTG decklist's mana curve, colours and lands.")
@@ -25,7 +25,7 @@ console = Console()
 
 def load_cards_with_progress(force_refresh: bool = False):
     """Load card data, showing a progress bar if a download is needed."""
-    needs_download = force_refresh or is_stale(DEFAULT_DATA_DIR / CACHE_FILENAME)
+    needs_download = force_refresh or needs_update(DEFAULT_DATA_DIR / CACHE_FILENAME)
     if not needs_download:
         return _load_cards()
 

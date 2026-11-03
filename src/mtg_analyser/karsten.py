@@ -49,6 +49,12 @@ MAX_PIPS = 4
 # Gold cards need every colour at once, so Karsten adds one to each requirement.
 GOLD_EXTRA = 1
 
+# How much of a land a land/spell MDFC is worth, from the land-count article's
+# regression (the formula below was fitted counting MDFCs this way). Mythic MDFCs
+# enter untapped more easily, so they're closer to real lands.
+MDFC_LAND_WEIGHT = 0.38
+MYTHIC_MDFC_LAND_WEIGHT = 0.74
+
 # Land-count formula coefficients (60-card regression).
 LANDS_BASE = 19.59
 LANDS_PER_MANA_VALUE = 1.90

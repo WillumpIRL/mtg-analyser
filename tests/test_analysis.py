@@ -11,6 +11,7 @@ from mtg_analyser.analysis import (
     is_cheap_draw,
     is_cheap_ramp,
     land_colours,
+    mdfc_land_weight,
 )
 from mtg_analyser.mana import parse_mana_cost
 from mtg_analyser.models import (
@@ -61,7 +62,7 @@ def land(name: str = "Mountain", produced: tuple[str, ...] = ("R",), text: str =
     return Card(name, "", 0, (), (), "Basic Land — Mountain", produced, text)
 
 
-def mdfc(name: str = "Shatterskull Smashing") -> Card:
+def mdfc(name: str = "Shatterskull Smashing", rarity: str = "mythic") -> Card:
     faces = (
         CardFace(name, "{X}{R}{R}", "Sorcery", ("R",), "Deals X damage."),
         CardFace(
@@ -74,7 +75,17 @@ def mdfc(name: str = "Shatterskull Smashing") -> Card:
         ),
     )
     return Card(
-        name, "{X}{R}{R}", 2, ("R",), ("R",), "Sorcery // Land", ("R",), "", "modal_dfc", faces
+        name,
+        "{X}{R}{R}",
+        2,
+        ("R",),
+        ("R",),
+        "Sorcery // Land",
+        ("R",),
+        "",
+        "modal_dfc",
+        faces,
+        rarity,
     )
 
 
@@ -318,10 +329,24 @@ def test_curve_average_and_pips() -> None:
     assert analysis.sources == {"R": 3}
 
 
-def test_land_check_counts_mdfcs_as_half() -> None:
-    deck, resolved = build((20, land()), (4, mdfc()), (36, spell(cost="{2}{R}")))
+@pytest.mark.parametrize("rarity, weight", [("mythic", 0.74), ("rare", 0.38), ("", 0.38)])
+def test_mdfc_land_weight_by_rarity(rarity: str, weight: float) -> None:
+    assert mdfc_land_weight(mdfc(rarity=rarity)) == weight
+    assert mdfc_land_weight(land()) == 0.0
+    assert mdfc_land_weight(spell()) == 0.0
+
+
+def test_land_check_counts_mdfcs_partially() -> None:
+    # Karsten's example: 21 lands + 4 non-mythic + 4 mythic MDFCs = 25.48 lands
+    deck, resolved = build(
+        (21, land()),
+        (4, mdfc("Spell Side", rarity="uncommon")),
+        (4, mdfc()),
+        (31, spell(cost="{2}{R}")),
+    )
     check = analyse(deck, resolved).land_check
-    assert (check.lands, check.mdfc_lands, check.effective) == (20, 4, 22.0)
+    assert (check.lands, check.mdfc_lands) == (21, 8)
+    assert check.effective == pytest.approx(25.48)
     assert check.recommended is not None
 
 

@@ -268,3 +268,72 @@ def test_progress_callback_reports_bytes(tmp_path, raw_cards) -> None:
     )
     assert seen
     assert seen[-1] == len(to_jsonl_gz(raw_cards))  # compressed bytes, as sent
+
+
+# ---------- cache format versions ----------
+
+
+def write_old_list_cache(path, cards) -> None:
+    """A version-1 cache: a bare list of cards, before rarity was stored."""
+    old = [{k: v for k, v in c.to_dict().items() if k != "rarity"} for c in cards]
+    path.write_text(json.dumps(old), encoding="utf-8")
+
+
+def test_new_cache_has_current_version(tmp_path, cards) -> None:
+    path = tmp_path / CACHE_FILENAME
+    save_cache(cards, path)
+    assert scryfall.cache_version(path) == scryfall.CACHE_VERSION
+    assert not scryfall.needs_update(path)
+
+
+def test_old_list_cache_is_version_1_and_needs_update(tmp_path, cards) -> None:
+    path = tmp_path / CACHE_FILENAME
+    write_old_list_cache(path, cards)
+    assert scryfall.cache_version(path) == 1
+    assert scryfall.needs_update(path)  # even though it's brand new
+    assert scryfall.cache_version(tmp_path / "missing.json") == 0
+
+
+def test_old_cache_is_rebuilt(tmp_path, cards, raw_cards) -> None:
+    write_old_list_cache(tmp_path / CACHE_FILENAME, cards)
+    calls: list[str] = []
+    loaded = load_cards(tmp_path, client=fake_scryfall(raw_cards, calls))
+    assert len(calls) == 2
+    assert {c.name: c.rarity for c in loaded}["Lightning Bolt"] == "uncommon"
+    assert scryfall.cache_version(tmp_path / CACHE_FILENAME) == scryfall.CACHE_VERSION
+
+
+def test_old_cache_still_used_offline(tmp_path, cards) -> None:
+    write_old_list_cache(tmp_path / CACHE_FILENAME, cards)
+    loaded = load_cards(tmp_path, client=offline_client())
+    assert [c.name for c in loaded] == [c.name for c in cards]
+    assert all(c.rarity == "" for c in loaded)  # missing field gets its default
+
+
+# ---------- damaged downloads ----------
+
+
+def serving(download: httpx.Response) -> httpx.Client:
+    """A client whose 'Scryfall' lists the bulk file and serves `download` for it."""
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if str(request.url) == scryfall.BULK_DATA_URL:
+            return httpx.Response(200, json=BULK_LIST)
+        return download
+
+    return httpx.Client(transport=httpx.MockTransport(handler))
+
+
+def test_short_download_rejected(tmp_path) -> None:
+    short = httpx.Response(200, content=b"x" * 10, headers={"Content-Length": "1000"})
+    with pytest.raises(ScryfallError, match="incomplete: got 10 of 1,000 bytes"):
+        load_cards(tmp_path, client=serving(short))
+    assert not list(tmp_path.iterdir())  # nothing half-written left behind
+
+
+def test_cut_off_gzip_raises_scryfall_error(tmp_path, raw_cards) -> None:
+    # A gzip stream that stops early raises EOFError, which used to escape uncaught.
+    data = to_jsonl_gz(raw_cards)
+    cut = data[: len(data) - 20]
+    with pytest.raises(ScryfallError, match="Could not read"):
+        load_cards(tmp_path, client=serving(httpx.Response(200, content=cut)))

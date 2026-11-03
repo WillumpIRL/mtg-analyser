@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import gzip
 import json
+import re
 import time
 from collections.abc import Callable, Iterable, Iterator
 from pathlib import Path
@@ -42,6 +43,9 @@ HEADERS = {
 DEFAULT_DATA_DIR = Path(__file__).resolve().parents[2] / "data"
 RAW_FILENAME = "oracle-cards.download"  # may be .json or .jsonl.gz; see iter_bulk_cards
 CACHE_FILENAME = "cards.json"
+# Bump when Card gains fields, so existing caches get rebuilt. 2 added rarity.
+CACHE_VERSION = 2
+_VERSION_RE = re.compile(rb'\s*\{"version":\s*(\d+)')
 MAX_AGE_DAYS = 7
 
 ProgressCallback = Callable[[int, int | None], None]
@@ -115,9 +119,13 @@ def download_file(
                         # Prefer bytes received over the wire: that matches Content-Length
                         # even when Scryfall sends the file compressed.
                         progress(response.num_bytes_downloaded or written, total)
+            received = response.num_bytes_downloaded or written
     except httpx.HTTPError as exc:
         tmp.unlink(missing_ok=True)
         raise ScryfallError(f"Download failed: {exc}") from exc
+    if total is not None and received != total:
+        tmp.unlink(missing_ok=True)
+        raise ScryfallError(f"Download incomplete: got {received:,} of {total:,} bytes.")
     tmp.replace(dest)
 
 
@@ -158,12 +166,38 @@ def slim_cards(raw_cards: Iterable[dict[str, Any]]) -> list[Card]:
 def save_cache(cards: list[Card], path: Path) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", encoding="utf-8") as f:
-        json.dump([c.to_dict() for c in cards], f, ensure_ascii=False)
+        # "version" comes first so cache_version() can read it without parsing the rest.
+        json.dump(
+            {"version": CACHE_VERSION, "cards": [c.to_dict() for c in cards]},
+            f,
+            ensure_ascii=False,
+        )
 
 
 def load_cache(path: Path) -> list[Card]:
+    """Load a cache of any version (older ones lack some fields, which get defaults)."""
     with path.open(encoding="utf-8") as f:
-        return [Card.from_dict(d) for d in json.load(f)]
+        data = json.load(f)
+    raw = data if isinstance(data, list) else data["cards"]  # version 1 was a bare list
+    return [Card.from_dict(d) for d in raw]
+
+
+def cache_version(path: Path) -> int:
+    """The cache's format version, read from its first bytes: 0 if missing or unreadable."""
+    try:
+        with path.open("rb") as f:
+            head = f.read(64)
+    except OSError:
+        return 0
+    if head.lstrip().startswith(b"["):
+        return 1
+    match = _VERSION_RE.match(head)
+    return int(match[1]) if match else 0
+
+
+def needs_update(path: Path) -> bool:
+    """True if the cache is missing, more than a week old, or in an older format."""
+    return is_stale(path) or cache_version(path) != CACHE_VERSION
 
 
 def update_cards(
@@ -184,7 +218,8 @@ def update_cards(
 
     try:
         cards = slim_cards(iter_bulk_cards(raw_path))
-    except (OSError, ValueError, KeyError) as exc:  # bad gzip, bad JSON, missing "name"
+    # OSError/EOFError: bad or cut-off gzip; ValueError: bad JSON; KeyError: no "name"
+    except (OSError, EOFError, ValueError, KeyError) as exc:
         raise ScryfallError(f"Could not read the downloaded card file: {exc}") from exc
     save_cache(cards, data_dir / CACHE_FILENAME)
     raw_path.unlink()  # the big file isn't needed once the slim cache exists
@@ -198,13 +233,14 @@ def load_cards(
     client: httpx.Client | None = None,
     progress: ProgressCallback | None = None,
 ) -> list[Card]:
-    """Load cards from the cache, downloading first if it's missing or stale.
+    """Load cards from the cache, downloading first if it's missing, stale or in an
+    older format.
 
-    If the cache is stale but Scryfall can't be reached, the old cache is used
-    so the tool still works offline.
+    If the cache needs updating but Scryfall can't be reached, the old cache is
+    used so the tool still works offline.
     """
     cache_path = data_dir / CACHE_FILENAME
-    if force_refresh or is_stale(cache_path):
+    if force_refresh or needs_update(cache_path):
         try:
             return update_cards(data_dir, client, progress)
         except ScryfallError:

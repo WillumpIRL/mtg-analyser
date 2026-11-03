@@ -113,3 +113,11 @@ def test_min_deck_size() -> None:
     assert DeckFormat.CONSTRUCTED.min_deck_size == 60
     assert DeckFormat.COMMANDER.min_deck_size == 100
     assert DeckFormat.UNKNOWN.min_deck_size == 0
+
+
+def test_rarity_kept_from_scryfall_and_cache(raw_by_name) -> None:
+    card = Card.from_scryfall(raw_by_name["Shatterskull Smashing // Shatterskull, the Hammer Pass"])
+    assert card.rarity == "mythic"
+    assert Card.from_dict(card.to_dict()).rarity == "mythic"
+    old_cache_entry = {k: v for k, v in card.to_dict().items() if k != "rarity"}
+    assert Card.from_dict(old_cache_entry).rarity == ""
