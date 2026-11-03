@@ -1,0 +1,105 @@
+[
+  {
+    "object": "card", "name": "Lightning Bolt", "layout": "normal",
+    "mana_cost": "{R}", "cmc": 1.0, "type_line": "Instant",
+    "oracle_text": "Lightning Bolt deals 3 damage to any target.",
+    "colors": ["R"], "color_identity": ["R"]
+  },
+  {
+    "object": "card", "name": "Counterspell", "layout": "normal",
+    "mana_cost": "{U}{U}", "cmc": 2.0, "type_line": "Instant",
+    "oracle_text": "Counter target spell.",
+    "colors": ["U"], "color_identity": ["U"]
+  },
+  {
+    "object": "card", "name": "Forest", "layout": "normal",
+    "mana_cost": "", "cmc": 0.0, "type_line": "Basic Land — Forest",
+    "oracle_text": "({T}: Add {G}.)",
+    "colors": [], "color_identity": ["G"], "produced_mana": ["G"]
+  },
+  {
+    "object": "card", "name": "Sol Ring", "layout": "normal",
+    "mana_cost": "{1}", "cmc": 1.0, "type_line": "Artifact",
+    "oracle_text": "{T}: Add {C}{C}.",
+    "colors": [], "color_identity": [], "produced_mana": ["C"]
+  },
+  {
+    "object": "card", "name": "Fire // Ice", "layout": "split",
+    "mana_cost": "{1}{R} // {1}{U}", "cmc": 4.0, "type_line": "Instant // Instant",
+    "colors": ["R", "U"], "color_identity": ["R", "U"],
+    "card_faces": [
+      {"object": "card_face", "name": "Fire", "mana_cost": "{1}{R}", "type_line": "Instant",
+       "oracle_text": "Fire deals 2 damage divided as you choose among one or two targets."},
+      {"object": "card_face", "name": "Ice", "mana_cost": "{1}{U}", "type_line": "Instant",
+       "oracle_text": "Tap target permanent.\nDraw a card."}
+    ]
+  },
+  {
+    "object": "card", "name": "Brazen Borrower // Petty Theft", "layout": "adventure",
+    "mana_cost": "{1}{U}{U} // {1}{U}", "cmc": 3.0,
+    "type_line": "Creature — Faerie Rogue // Instant — Adventure",
+    "colors": ["U"], "color_identity": ["U"],
+    "card_faces": [
+      {"object": "card_face", "name": "Brazen Borrower", "mana_cost": "{1}{U}{U}",
+       "type_line": "Creature — Faerie Rogue", "oracle_text": "Flash\nFlying"},
+      {"object": "card_face", "name": "Petty Theft", "mana_cost": "{1}{U}",
+       "type_line": "Instant — Adventure",
+       "oracle_text": "Return target nonland permanent an opponent controls to its owner's hand."}
+    ]
+  },
+  {
+    "object": "card", "name": "Delver of Secrets // Insectile Aberration", "layout": "transform",
+    "cmc": 1.0, "type_line": "Creature — Human Wizard // Creature — Human Insect",
+    "color_identity": ["U"],
+    "card_faces": [
+      {"object": "card_face", "name": "Delver of Secrets", "mana_cost": "{U}",
+       "type_line": "Creature — Human Wizard", "colors": ["U"],
+       "oracle_text": "At the beginning of your upkeep, look at the top card of your library."},
+      {"object": "card_face", "name": "Insectile Aberration", "mana_cost": "",
+       "type_line": "Creature — Human Insect", "colors": ["U"], "oracle_text": "Flying"}
+    ]
+  },
+  {
+    "object": "card", "name": "Shatterskull Smashing // Shatterskull, the Hammer Pass",
+    "layout": "modal_dfc", "cmc": 2.0, "type_line": "Sorcery // Land",
+    "color_identity": ["R"], "produced_mana": ["R"],
+    "card_faces": [
+      {"object": "card_face", "name": "Shatterskull Smashing", "mana_cost": "{X}{R}{R}",
+       "type_line": "Sorcery", "colors": ["R"],
+       "oracle_text": "Shatterskull Smashing deals X damage divided as you choose among up to two target creatures and/or planeswalkers."},
+      {"object": "card_face", "name": "Shatterskull, the Hammer Pass", "mana_cost": "",
+       "type_line": "Land", "colors": [],
+       "oracle_text": "As Shatterskull, the Hammer Pass enters, you may pay 3 life.\n{T}: Add {R}."}
+    ]
+  },
+  {
+    "object": "card", "name": "Lim-Dûl's Vault", "layout": "normal",
+    "mana_cost": "{U}{B}", "cmc": 2.0, "type_line": "Instant",
+    "colors": ["B", "U"], "color_identity": ["B", "U"]
+  },
+  {
+    "object": "card", "name": "Æther Vial", "layout": "normal",
+    "mana_cost": "{1}", "cmc": 1.0, "type_line": "Artifact",
+    "colors": [], "color_identity": []
+  },
+  {
+    "object": "card", "name": "Kitchen Finks", "layout": "normal",
+    "mana_cost": "{1}{G/W}{G/W}", "cmc": 3.0, "type_line": "Creature — Ouphe",
+    "colors": ["G", "W"], "color_identity": ["G", "W"]
+  },
+  {
+    "object": "card", "name": "Gitaxian Probe", "layout": "normal",
+    "mana_cost": "{U/P}", "cmc": 1.0, "type_line": "Sorcery",
+    "colors": ["U"], "color_identity": ["U"]
+  },
+  {
+    "object": "card", "name": "Fireball", "layout": "normal",
+    "mana_cost": "{X}{R}", "cmc": 1.0, "type_line": "Sorcery",
+    "colors": ["R"], "color_identity": ["R"]
+  },
+  {
+    "object": "card", "name": "Goblin", "layout": "token",
+    "mana_cost": "", "cmc": 0.0, "type_line": "Token Creature — Goblin",
+    "colors": ["R"], "color_identity": ["R"]
+  }
+]

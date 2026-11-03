@@ -1,0 +1,35 @@
+# Red-Green draft deck, Core Set 2020 (40 cards)
+# Hand-typed style: "2x" quantities, headers with colons, comments.
+
+Deck:
+// Creatures (15)
+1x Ferocious Pup
+2x Keldon Raider
+1x Scorch Spitter
+2x Gnarlback Rhino
+1x Bristling Boar
+1x Netcaster Spider
+1x Wildwood Scourge
+1x Overgrowth Elemental
+1x Elvish Reclaimer
+1x Woodland Champion
+1x Fire Elemental
+1x Hostile Minotaur
+1x Centaur Courser
+
+// Spells (8)
+2x Shock
+2x Rabid Bite
+1x Titanic Growth
+1x Infuriate
+1x Engulfing Eruption
+1x Pulse of Murasa
+
+// Lands (17)
+9x Forest
+8x Mountain
+
+Sideboard:
+1x Act of Treason
+1x Reduce to Ashes
+2x Thicket Crasher

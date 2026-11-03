@@ -1,0 +1,22 @@
+About
+Name Mono-Red Aggro
+
+Deck
+4 Monastery Swiftspear (BRO) 144
+4 Soul-Scar Mage (AKR) 175
+4 Phoenix Chick (DMU) 140
+4 Kumano Faces Kakkazan (NEO) 152
+4 Bonecrusher Giant (ELD) 115
+4 Fable of the Mirror-Breaker (NEO) 141
+4 Play with Fire (MID) 154
+4 Lightning Strike (M19) 152
+4 Light Up the Stage (RNA) 107
+3 Shatterskull Smashing (ZNR) 161
+2 Embercleave (ELD) 120
+19 Mountain (DMU) 271
+
+Sideboard
+3 Roiling Vortex (ZNR) 156
+3 Unlicensed Hearse (SNC) 246
+4 Redcap Melee (ELD) 135
+3 Fiery Cannonade (XLN) 143
